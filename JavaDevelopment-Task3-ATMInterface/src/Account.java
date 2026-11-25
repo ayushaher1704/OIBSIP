@@ -10,6 +10,8 @@ public class Account {
     private double balance;
 
     private List<Transaction> transactions;
+    public static final double MAX_BALANCE = 5_000_000.00;   // Rs. 50 Lakh max account limit
+    public static final double MAX_SINGLE_TX = 500_000.00;   // Rs. 5 Lakh max per transaction
 
 public Account(String userId, String pin, String holderName, double initialBalance) {
 
@@ -46,13 +48,17 @@ public String getUserId() {
         return this.pin.equals(inputPin);
     }
 
-    public void deposit(double amount) {
+   public boolean deposit(double amount) {
+        if (amount <= 0 || amount > MAX_SINGLE_TX || (balance + amount) > MAX_BALANCE) {
+            return false;
+        }
         balance += amount;
         transactions.add(new Transaction("DEPOSIT", amount, "Cash deposit"));
+        return true;
     }
 
     public boolean withdraw(double amount) {
-        if (amount > balance) {
+        if (amount <= 0 || amount > MAX_SINGLE_TX || amount > balance) {
             return false;
         }
         balance -= amount;
@@ -61,7 +67,10 @@ public String getUserId() {
     }
 
     public boolean transfer(Account recipient, double amount) {
-        if (amount > balance) {
+        if (amount <= 0 || amount > MAX_SINGLE_TX || amount > balance) {
+            return false;
+        }
+        if ((recipient.balance + amount) > MAX_BALANCE) {
             return false;
         }
         this.balance -= amount;
@@ -70,7 +79,6 @@ public String getUserId() {
         recipient.transactions.add(new Transaction("TRANSFER IN", amount, "From User ID: " + this.userId));
         return true;
     }
-
     public void printTransactionHistory() {
         System.out.println("\n--- Transaction History (" + holderName + ") ---");
         if (transactions.isEmpty()) {

@@ -13,9 +13,11 @@ import java.util.Map;
 
 public class WebATMServer {
     private static final Bank bank = new Bank();
+    
 
     public static void main(String[] args) throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+        int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
         // Serve the HTML page
         server.createContext("/", exchange -> {
@@ -41,7 +43,7 @@ public class WebATMServer {
             }
         });
 
-        // Deposit endpoint
+    // Deposit endpoint
         server.createContext("/api/deposit", exchange -> {
             Map<String, String> form = parseForm(exchange);
             Account acc = bank.findAccount(form.get("userId"));
@@ -50,6 +52,10 @@ public class WebATMServer {
                 sendJson(exchange, "{\"ok\":false,\"message\":\"Session expired. Please login again.\"}");
             } else if (amount <= 0) {
                 sendJson(exchange, "{\"ok\":false,\"message\":\"Enter a valid positive amount.\"}");
+            } else if (amount > Account.MAX_SINGLE_TX) {
+                sendJson(exchange, "{\"ok\":false,\"message\":\"Single deposit limit is Rs. 5,00,000.\"}");
+            } else if ((acc.getBalance() + amount) > Account.MAX_BALANCE) {
+                sendJson(exchange, "{\"ok\":false,\"message\":\"Limit exceeded: Maximum account balance is Rs. 50,00,000 (50 Lakh).\"}");
             } else {
                 acc.deposit(amount);
                 sendJson(exchange, accountJson(acc, true, String.format(java.util.Locale.US, "Deposited Rs. %.2f", amount)));
@@ -65,6 +71,8 @@ public class WebATMServer {
                 sendJson(exchange, "{\"ok\":false,\"message\":\"Session expired. Please login again.\"}");
             } else if (amount <= 0) {
                 sendJson(exchange, "{\"ok\":false,\"message\":\"Enter a valid positive amount.\"}");
+            } else if (amount > Account.MAX_SINGLE_TX) {
+                sendJson(exchange, "{\"ok\":false,\"message\":\"Single withdrawal limit is Rs. 5,00,000.\"}");
             } else if (acc.withdraw(amount)) {
                 sendJson(exchange, accountJson(acc, true, String.format(java.util.Locale.US, "Withdrawn Rs. %.2f", amount)));
             } else {
@@ -86,18 +94,22 @@ public class WebATMServer {
                 sendJson(exchange, "{\"ok\":false,\"message\":\"Recipient User ID not found.\"}");
             } else if (amount <= 0) {
                 sendJson(exchange, "{\"ok\":false,\"message\":\"Enter a valid positive amount.\"}");
+            } else if (amount > Account.MAX_SINGLE_TX) {
+                sendJson(exchange, "{\"ok\":false,\"message\":\"Single transfer limit is Rs. 5,00,000.\"}");
             } else {
                 Account recipient = bank.findAccount(toId);
-                if (acc.transfer(recipient, amount)) {
+                if ((recipient.getBalance() + amount) > Account.MAX_BALANCE) {
+                    sendJson(exchange, "{\"ok\":false,\"message\":\"Recipient balance cannot exceed Rs. 50,00,000 (50 Lakh).\"}");
+                } else if (acc.transfer(recipient, amount)) {
                     sendJson(exchange, accountJson(acc, true, String.format(java.util.Locale.US, "Transferred Rs. %.2f to %s", amount, recipient.getHolderName())));
                 } else {
                     sendJson(exchange, "{\"ok\":false,\"message\":\"Insufficient balance.\"}");
                 }
             }
+            
         });
-
         server.start();
-        System.out.println("ATM Web Portal running at: http://localhost:8080");
+        System.out.println("ATM Web Portal running at: http://localhost:" + port);
     }
 
     private static Map<String, String> parseForm(HttpExchange exchange) throws IOException {

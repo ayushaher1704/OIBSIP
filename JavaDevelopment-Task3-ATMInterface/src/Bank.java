@@ -5,8 +5,8 @@ public class Bank {
     private final Map<String, Account> accounts = new HashMap<>();
 
     public Bank() {
-        accounts.put("1001", new Account("1001", "1234", "Ayush Aher", 10000.00));
-        accounts.put("1002", new Account("1002", "5678", "Rahul Sharma", 5000.00));
+        accounts.put("1001", new Account("1001", "1234", "Aarav Kulkarni", 25000.00));
+        accounts.put("1002", new Account("1002", "5678", "Priya Nair", 15000.00));
     }
 
     public Account authenticate(String userId, String pin) {

@@ -3,91 +3,244 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OIBSIP ATM Portal</title>
+  <title>NexaBank — Digital ATM Portal</title>
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
-    body { background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 24px; width: 100%; max-width: 720px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
-    .login-box { max-width: 400px; }
-    h1 { font-size: 1.5rem; margin-bottom: 6px; color: #38bdf8; }
-    p.sub { font-size: 0.85rem; color: #94a3b8; margin-bottom: 18px; }
-    input { width: 100%; padding: 10px 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 0.95rem; }
-    button { padding: 10px 16px; border: none; border-radius: 8px; background: #0284c7; color: #fff; font-weight: 600; cursor: pointer; transition: 0.2s; }
-    button:hover { background: #0369a1; }
-    button.danger { background: #dc2626; }
-    button.danger:hover { background: #b91c1c; }
-    .hidden { display: none; }
-    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-    .balance-box { background: linear-gradient(135deg, #0284c7, #1d4ed8); padding: 18px; border-radius: 12px; margin-bottom: 20px; }
-    .balance-box span { font-size: 0.85rem; opacity: 0.9; }
-    .balance-box h2 { font-size: 2rem; margin-top: 4px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
-    .action-card { background: #0f172a; padding: 14px; border-radius: 10px; border: 1px solid #334155; }
-    .action-card h3 { font-size: 1rem; margin-bottom: 10px; color: #e2e8f0; }
-    .action-card button { width: 100%; }
-    .msg { padding: 10px; border-radius: 8px; margin-bottom: 14px; font-size: 0.9rem; display: none; }
-    .msg.ok { display: block; background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
-    .msg.err { display: block; background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
-    .history { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px; max-height: 200px; overflow-y: auto; }
-    .history h3 { font-size: 1rem; margin-bottom: 10px; }
-    .tx-row { font-family: monospace; font-size: 0.82rem; padding: 6px 0; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+    :root {
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #0f172a;
+      --primary-hover: #1e293b;
+      --primary-text: #ffffff;
+      --accent: #059669;
+      --input-bg: #f8fafc;
+      --subtle-bg: #f1f5f9;
+      --row-border: #f1f5f9;
+      --card-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b1120;
+      --surface: #111827;
+      --border: #1f2937;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --primary-text: #0f172a;
+      --accent: #10b981;
+      --input-bg: #0f172a;
+      --subtle-bg: #1e293b;
+      --row-border: #1f2937;
+      --card-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    }
+
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; transition: background 0.2s, color 0.2s; }
+    .hidden { display: none !important; }
+
+    /* Containers */
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 410px; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06); }
+    .app-shell { width: 100%; max-width: 820px; display: grid; gap: 20px; }
+
+    /* Header */
+    .topbar { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .login-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+    .user-meta { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text-muted); }
+
+    /* Buttons & Inputs */
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    input { width: 100%; padding: 11px 14px; margin-bottom: 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main); font-size: 0.95rem; outline: none; transition: border 0.15s; }
+    input:focus { border-color: var(--primary); }
+    button { padding: 11px 18px; border: none; border-radius: 10px; background: var(--primary); color: var(--primary-text); font-weight: 600; font-size: 0.92rem; cursor: pointer; transition: background 0.15s; }
+    button:hover { background: var(--primary-hover); }
+    .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border); padding: 7px 12px; font-size: 0.82rem; }
+    .btn-outline:hover { background: var(--subtle-bg); }
+
+    /* Balance Card */
+    .balance-card { background: var(--card-bg); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 26px; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15); }
+    .balance-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .balance-label { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
+    .balance-amount { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; margin-top: 4px; word-break: break-word; }
+    .acct-badge { background: rgba(255, 255, 255, 0.1); padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-family: monospace; color: #e2e8f0; white-space: nowrap; }
+
+    /* 50 Lakh Limit Meter */
+    .limit-wrap { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 14px; }
+    .limit-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 6px; }
+    .limit-track { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.15); border-radius: 999px; overflow: hidden; }
+    .limit-fill { height: 100%; width: 0%; background: #10b981; border-radius: 999px; transition: width 0.3s ease; }
+
+    /* Main Grid */
+    .main-grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 20px; }
+    @media (max-width: 720px) { .main-grid { grid-template-columns: 1fr; } }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+    .panel-title { font-size: 1rem; font-weight: 700; margin-bottom: 14px; }
+
+    /* Tabs & Quick Chips */
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--subtle-bg); padding: 4px; border-radius: 10px; margin-bottom: 18px; }
+    .tab-btn { background: transparent; color: var(--text-muted); padding: 8px; font-size: 0.86rem; border-radius: 8px; }
+    .tab-btn:hover { background: transparent; color: var(--text-main); }
+    .tab-btn.active { background: var(--surface); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .chips { display: flex; gap: 8px; margin-bottom: 14px; }
+    .chip { background: var(--subtle-bg); color: var(--text-main); border: 1px solid var(--border); padding: 5px 10px; font-size: 0.8rem; border-radius: 8px; }
+    .chip:hover { border-color: var(--primary); }
+
+    /* Alerts */
+    .msg { padding: 11px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 0.86rem; font-weight: 500; display: none; }
+    .msg.ok { display: block; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .msg.err { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    [data-theme="dark"] .msg.ok { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.35); }
+    [data-theme="dark"] .msg.err { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); }
+
+    /* Statement Rows */
+    .tx-list { display: flex; flex-direction: column; max-height: 310px; overflow-y: auto; }
+    .tx-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--row-border); }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-left { display: flex; flex-direction: column; gap: 3px; }
+    .tx-desc { font-size: 0.88rem; font-weight: 600; color: var(--text-main); }
+    .tx-date { font-size: 0.76rem; color: var(--text-muted); }
+    .tx-right { text-align: right; font-variant-numeric: tabular-nums; }
+    .tx-amt { font-size: 0.92rem; font-weight: 700; }
+    .tx-amt.credit { color: #10b981; }
+    .tx-amt.debit { color: var(--text-main); }
+    .tag { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: var(--subtle-bg); color: var(--text-muted); margin-right: 6px; }
+
+    .footer-note { margin-top: 18px; font-size: 0.78rem; color: var(--text-muted); text-align: center; }
   </style>
 </head>
 <body>
 
   <!-- LOGIN VIEW -->
-  <div id="loginView" class="card login-box">
-    <h1>OIBSIP ATM Portal</h1>
-    <p class="sub">Demo: ID <b>1001</b> / PIN <b>1234</b> &nbsp;|&nbsp; ID <b>1002</b> / PIN <b>5678</b></p>
+  <div id="loginView" class="login-card">
+    <div class="login-header">
+      <div class="brand"><span class="brand-dot"></span> NexaBank ATM</div>
+      <button type="button" class="btn-outline" onclick="toggleTheme()" id="themeBtnLogin">Dark Mode</button>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+      Public Sandbox • ID <b>1001</b> / PIN <b>1234</b> &nbsp;|&nbsp; ID <b>1002</b> / PIN <b>5678</b>
+    </p>
     <div id="loginMsg" class="msg"></div>
-    <input type="text" id="loginId" placeholder="Enter User ID (e.g. 1001)" />
-    <input type="password" id="loginPin" placeholder="Enter 4-digit PIN" />
-    <button style="width:100%" onclick="login()">Login to ATM</button>
+    <label for="loginId">User ID</label>
+    <input type="text" id="loginId" placeholder="e.g. 1001" />
+    <label for="loginPin">4-Digit PIN</label>
+    <input type="password" id="loginPin" placeholder="••••" />
+    <button style="width: 100%;" onclick="login()">Sign In</button>
   </div>
 
   <!-- DASHBOARD VIEW -->
-  <div id="dashView" class="card hidden">
-    <div class="top-bar">
-      <div>
-        <h1 id="welcomeText">Welcome</h1>
-        <p class="sub" id="userIdText" style="margin:0">User ID: </p>
-      </div>
-      <button class="danger" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="balance-box">
-      <span>Available Balance</span>
-      <h2 id="balanceText">Rs. 0.00</h2>
-    </div>
-
-    <div id="dashMsg" class="msg"></div>
-
-    <div class="grid">
-      <div class="action-card">
-        <h3>Deposit</h3>
-        <input type="number" id="depAmt" placeholder="Amount (Rs.)" />
-        <button onclick="doAction('deposit')">Deposit Cash</button>
-      </div>
-      <div class="action-card">
-        <h3>Withdraw</h3>
-        <input type="number" id="withAmt" placeholder="Amount (Rs.)" />
-        <button onclick="doAction('withdraw')">Withdraw Cash</button>
-      </div>
-      <div class="action-card">
-        <h3>Transfer</h3>
-        <input type="text" id="toId" placeholder="Recipient ID (e.g. 1002)" />
-        <input type="number" id="transAmt" placeholder="Amount (Rs.)" />
-        <button onclick="doAction('transfer')">Send Money</button>
+  <div id="dashView" class="app-shell hidden">
+    <div class="topbar">
+      <div class="brand"><span class="brand-dot"></span> NexaBank ATM</div>
+      <div class="user-meta">
+        <span id="welcomeText">Aarav Kulkarni</span>
+        <button type="button" class="btn-outline" onclick="toggleTheme()" id="themeBtnDash">Dark Mode</button>
+        <button type="button" class="btn-outline" onclick="logout()">Sign Out</button>
       </div>
     </div>
 
-    <div class="history">
-      <h3>Transaction History</h3>
-      <div id="txList"></div>
+    <div class="balance-card">
+      <div class="balance-top">
+        <div>
+          <div class="balance-label">Available Balance</div>
+          <div class="balance-amount" id="balanceText">₹0.00</div>
+        </div>
+        <div class="acct-badge" id="userIdText">A/C •••• 1001</div>
+      </div>
+
+      <div class="limit-wrap">
+        <div class="limit-labels">
+          <span>Account Cap (₹50,00,000 Max)</span>
+          <span id="limitPercentText">0.0% used</span>
+        </div>
+        <div class="limit-track">
+          <div class="limit-fill" id="limitFillBar"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="panel">
+        <div class="panel-title">Quick Transaction</div>
+        <div class="tabs">
+          <button class="tab-btn active" id="tab-deposit" onclick="switchTab('deposit')">Deposit</button>
+          <button class="tab-btn" id="tab-withdraw" onclick="switchTab('withdraw')">Withdraw</button>
+          <button class="tab-btn" id="tab-transfer" onclick="switchTab('transfer')">Transfer</button>
+        </div>
+
+        <div id="dashMsg" class="msg"></div>
+
+        <div id="panel-deposit">
+          <label for="depAmt">Deposit Amount (Max ₹5,00,000)</label>
+          <input type="number" id="depAmt" placeholder="0.00" max="500000" />
+          <div class="chips">
+            <button type="button" class="chip" onclick="addQuick('depAmt', 500)">+₹500</button>
+            <button type="button" class="chip" onclick="addQuick('depAmt', 2000)">+₹2,000</button>
+            <button type="button" class="chip" onclick="addQuick('depAmt', 10000)">+₹10,000</button>
+          </div>
+          <button style="width: 100%;" onclick="doAction('deposit')">Confirm Deposit</button>
+        </div>
+
+        <div id="panel-withdraw" class="hidden">
+          <label for="withAmt">Withdrawal Amount (Max ₹5,00,000)</label>
+          <input type="number" id="withAmt" placeholder="0.00" max="500000" />
+          <div class="chips">
+            <button type="button" class="chip" onclick="addQuick('withAmt', 500)">+₹500</button>
+            <button type="button" class="chip" onclick="addQuick('withAmt', 2000)">+₹2,000</button>
+            <button type="button" class="chip" onclick="addQuick('withAmt', 5000)">+₹5,000</button>
+          </div>
+          <button style="width: 100%;" onclick="doAction('withdraw')">Withdraw Cash</button>
+        </div>
+
+        <div id="panel-transfer" class="hidden">
+          <label for="toId">Recipient User ID</label>
+          <input type="text" id="toId" placeholder="e.g. 1002" />
+          <label for="transAmt">Transfer Amount (Max ₹5,00,000)</label>
+          <input type="number" id="transAmt" placeholder="0.00" max="500000" />
+          <button style="width: 100%;" onclick="doAction('transfer')">Send Transfer</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Recent Activity</div>
+        <div class="tx-list" id="txList"></div>
+      </div>
     </div>
   </div>
-<script>
+
+  <div class="footer-note">NexaBank Digital Sandbox • Powered by Core Java HttpServer</div>
+
+  <script>
+    const MAX_BALANCE_LIMIT = 5000000;
     let currentUserId = "";
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      const label = theme === "dark" ? "Light Mode" : "Dark Mode";
+      document.getElementById("themeBtnLogin").textContent = label;
+      document.getElementById("themeBtnDash").textContent = label;
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      const next = current === "dark" ? "light" : "dark";
+      localStorage.setItem("nexabank-theme", next);
+      applyTheme(next);
+    }
+
+    applyTheme(localStorage.getItem("nexabank-theme") || "light");
+
+    function formatINR(value) {
+      return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(value);
+    }
 
     function showMsg(elementId, text, isOk) {
       const box = document.getElementById(elementId);
@@ -95,18 +248,62 @@
       box.className = "msg " + (isOk ? "ok" : "err");
     }
 
+    function switchTab(tabName) {
+      ["deposit", "withdraw", "transfer"].forEach(name => {
+        document.getElementById("tab-" + name).classList.toggle("active", name === tabName);
+        document.getElementById("panel-" + name).classList.toggle("hidden", name !== tabName);
+      });
+      document.getElementById("dashMsg").className = "msg";
+    }
+
+    function addQuick(inputId, addValue) {
+      const input = document.getElementById(inputId);
+      const current = parseFloat(input.value) || 0;
+      input.value = Math.min(500000, current + addValue);
+    }
+
+    function parseTxRow(raw) {
+      const match = raw.match(/^Type:\s*(.+?)\s+Amount:\s*Rs\.\s*([0-9.]+)\s+Description:\s*(.+?)\s+Date:\s*(.+)$/);
+      if (!match) return { type: "TXN", amount: 0, desc: raw, date: "" };
+      return {
+        type: match[1].trim(),
+        amount: parseFloat(match[2]) || 0,
+        desc: match[3].trim(),
+        date: match[4].trim()
+      };
+    }
+
     function updateDashboard(data) {
-      document.getElementById("welcomeText").textContent = "Welcome, " + data.holderName;
-      document.getElementById("userIdText").textContent = "User ID: " + data.userId;
-      document.getElementById("balanceText").textContent = "Rs. " + data.balance;
+      const numericBalance = parseFloat(data.balance) || 0;
+      document.getElementById("welcomeText").textContent = data.holderName;
+      document.getElementById("userIdText").textContent = "A/C •••• " + data.userId;
+      document.getElementById("balanceText").textContent = formatINR(numericBalance);
+
+      const pct = Math.min(100, (numericBalance / MAX_BALANCE_LIMIT) * 100);
+      document.getElementById("limitPercentText").textContent = pct.toFixed(1) + "% used";
+      const fillBar = document.getElementById("limitFillBar");
+      fillBar.style.width = pct + "%";
+      fillBar.style.background = pct >= 85 ? "#f59e0b" : "#10b981";
 
       const txList = document.getElementById("txList");
       txList.innerHTML = "";
-      data.history.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "tx-row";
-        div.textContent = item;
-        txList.appendChild(div);
+      [...data.history].reverse().forEach(item => {
+        const tx = parseTxRow(item);
+        const isCredit = tx.type === "DEPOSIT" || tx.type === "TRANSFER IN" || tx.type === "OPENING";
+        const row = document.createElement("div");
+        row.className = "tx-item";
+        row.innerHTML = `
+          <div class="tx-left">
+            <div class="tx-desc"><span class="tag">${tx.type}</span>${tx.desc}</div>
+            <div class="tx-date">${tx.date}</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amt ${isCredit ? "credit" : "debit"}">
+              ${isCredit ? "+" : "-"}${formatINR(tx.amount)}
+            </div>
+          </div>
+        `;
+        txList.appendChild(row);
       });
     }
 
