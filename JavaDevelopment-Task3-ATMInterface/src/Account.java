@@ -38,6 +38,10 @@ public String getUserId() {
         return balance;
     }
 
+    public List<Transaction> getTransactions() {
+        return transactions;
+    }
+
     public boolean validatePin(String inputPin) {
         return this.pin.equals(inputPin);
     }
