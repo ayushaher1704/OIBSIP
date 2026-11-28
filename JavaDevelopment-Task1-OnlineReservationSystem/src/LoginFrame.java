@@ -17,7 +17,6 @@ public class LoginFrame extends JFrame {
         gbc.insets = new Insets(6, 6, 6, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Title
         JLabel titleLabel = new JLabel("Railway Reservation Portal");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         gbc.gridx = 0;
@@ -32,7 +31,6 @@ public class LoginFrame extends JFrame {
         gbc.insets = new Insets(0, 6, 14, 6);
         panel.add(subLabel, gbc);
 
-        // Username row
         gbc.gridwidth = 1;
         gbc.insets = new Insets(6, 6, 6, 6);
         gbc.gridy = 2;
@@ -43,7 +41,6 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 1;
         panel.add(usernameField, gbc);
 
-        // Password row
         gbc.gridy = 3;
         gbc.gridx = 0;
         panel.add(new JLabel("Password:"), gbc);
@@ -52,7 +49,6 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 1;
         panel.add(passwordField, gbc);
 
-        // Sign In button
         JButton loginButton = new JButton("Sign In");
         loginButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
         gbc.gridy = 4;
@@ -61,13 +57,12 @@ public class LoginFrame extends JFrame {
         gbc.insets = new Insets(14, 6, 4, 6);
         panel.add(loginButton, gbc);
 
-        // Allow pressing Enter to submit
         getRootPane().setDefaultButton(loginButton);
         loginButton.addActionListener(e -> handleLogin());
 
         add(panel);
         pack();
-        setLocationRelativeTo(null); // Centers the window on your screen
+        setLocationRelativeTo(null);
     }
 
     private void handleLogin() {
@@ -87,13 +82,8 @@ public class LoginFrame extends JFrame {
         String fullName = AuthService.authenticate(username, password);
 
         if (fullName != null) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Welcome, " + fullName + "! Login successful.",
-                "Access Granted",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-            dispose(); // Closes the login window (in Step 4, this will open the main booking screen)
+            dispose();
+            SwingUtilities.invokeLater(() -> new MainFrame(fullName).setVisible(true));
         } else {
             JOptionPane.showMessageDialog(
                 this,
@@ -107,7 +97,6 @@ public class LoginFrame extends JFrame {
 
     public static void main(String[] args) {
         DatabaseManager.initializeDatabase();
-
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {}
