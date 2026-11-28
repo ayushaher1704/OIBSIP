@@ -7,10 +7,11 @@ public class Reservation {
     private final String journeyDate;
     private final String source;
     private final String destination;
+    private final int fare;
 
     public Reservation(String pnr, String passengerName, String trainNumber,
                        String trainName, String classType, String journeyDate,
-                       String source, String destination) {
+                       String source, String destination, int fare) {
         this.pnr = pnr;
         this.passengerName = passengerName;
         this.trainNumber = trainNumber;
@@ -19,6 +20,7 @@ public class Reservation {
         this.journeyDate = journeyDate;
         this.source = source;
         this.destination = destination;
+        this.fare = fare;
     }
 
     public String getPnr() { return pnr; }
@@ -29,5 +31,5 @@ public class Reservation {
     public String getJourneyDate() { return journeyDate; }
     public String getSource() { return source; }
     public String getDestination() { return destination; }
-
+    public int getFare() { return fare; }
 }

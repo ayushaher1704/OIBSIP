@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class ReservationService {
 
-    // 1. Fetches all trains formatted as "12951 - Mumbai Rajdhani Express" for the dropdown
+    // 1. Fetches all trains formatted as "12951 - Mumbai Rajdhani Express"
     public static List<String> getAllTrains() {
         List<String> trains = new ArrayList<>();
         String sql = "SELECT train_number, train_name FROM trains ORDER BY train_number";
@@ -20,8 +20,7 @@ public class ReservationService {
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
-                String entry = rs.getString("train_number") + " - " + rs.getString("train_name");
-                trains.add(entry);
+                trains.add(rs.getString("train_number") + " - " + rs.getString("train_name"));
             }
         } catch (SQLException e) {
             System.out.println("Error loading trains: " + e.getMessage());
@@ -39,8 +38,7 @@ public class ReservationService {
             pstmt.setString(1, trainNumber.trim());
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    String rawStops = rs.getString("route_stops");
-                    String[] stops = rawStops.split(",");
+                    String[] stops = rs.getString("route_stops").split(",");
                     for (int i = 0; i < stops.length; i++) {
                         stops[i] = stops[i].trim();
                     }
@@ -53,11 +51,64 @@ public class ReservationService {
         return new String[0];
     }
 
-    // 3. Validates inputs, generates a unique 10-digit PNR, and saves to SQLite
+    // 3. Fetches valid coach classes for the selected train
+    public static String[] getTrainClasses(String trainNumber) {
+        String sql = "SELECT available_classes FROM trains WHERE train_number = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, trainNumber.trim());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    String[] classes = rs.getString("available_classes").split(",");
+                    for (int i = 0; i < classes.length; i++) {
+                        classes[i] = classes[i].trim();
+                    }
+                    return classes;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error loading train classes: " + e.getMessage());
+        }
+        return new String[]{"SL - Sleeper", "3A - AC 3 Tier"};
+    }
+
+    // 4. Calculates realistic ticket fare in INR based on stops, coach class, and train tier
+    public static int calculateFare(String trainNumber, int boardingIndex, int destinationIndex, String classType) {
+        int hops = Math.max(1, destinationIndex - boardingIndex);
+        String code = (classType != null && classType.contains(" - "))
+            ? classType.split(" - ", 2)[0].trim()
+            : "SL";
+
+        int ratePerStop;
+        int minFare;
+        switch (code) {
+            case "2S" -> { ratePerStop = 65;  minFare = 95; }
+            case "SL" -> { ratePerStop = 140; minFare = 220; }
+            case "CC" -> { ratePerStop = 260; minFare = 420; }
+            case "3A" -> { ratePerStop = 340; minFare = 550; }
+            case "EC" -> { ratePerStop = 490; minFare = 780; }
+            case "2A" -> { ratePerStop = 510; minFare = 820; }
+            case "1A" -> { ratePerStop = 850; minFare = 1350; }
+            default   -> { ratePerStop = 200; minFare = 300; }
+        }
+
+        boolean isPremiumTrain = trainNumber.startsWith("20")
+            || trainNumber.startsWith("22")
+            || trainNumber.startsWith("1295")
+            || trainNumber.startsWith("1230")
+            || trainNumber.startsWith("1200");
+
+        double rawFare = Math.max(minFare, hops * ratePerStop) * (isPremiumTrain ? 1.25 : 1.0);
+        return (int) (Math.round(rawFare / 5.0) * 5);
+    }
+
+    // 5. Validates inputs, generates a unique 10-digit PNR, and saves ticket + fare to SQLite
     public static Reservation bookTicket(String passengerName, String trainNumber,
                                          String trainName, String classType,
                                          String journeyDate, String source,
-                                         String destination) throws Exception {
+                                         String destination, int fare) throws Exception {
 
         if (passengerName.isBlank() || trainNumber.isBlank() || trainName.isBlank()
                 || journeyDate.isBlank() || source.isBlank() || destination.isBlank()) {
@@ -81,8 +132,8 @@ public class ReservationService {
         String pnr = generateUniquePnr();
         String sql = """
             INSERT INTO reservations
-            (pnr, passenger_name, train_number, train_name, class_type, journey_date, source, destination)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (pnr, passenger_name, train_number, train_name, class_type, journey_date, source, destination, fare)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -96,16 +147,17 @@ public class ReservationService {
             pstmt.setString(6, journeyDate.trim());
             pstmt.setString(7, source.trim());
             pstmt.setString(8, destination.trim());
+            pstmt.setInt(9, fare);
             pstmt.executeUpdate();
         }
 
         return new Reservation(
             pnr, passengerName.trim(), trainNumber.trim(), trainName.trim(),
-            classType.trim(), journeyDate.trim(), source.trim(), destination.trim()
+            classType.trim(), journeyDate.trim(), source.trim(), destination.trim(), fare
         );
     }
 
-    // 4. Fetches a ticket by PNR number
+    // 6. Fetches a single ticket by PNR number
     public static Reservation findByPnr(String pnr) {
         String sql = "SELECT * FROM reservations WHERE pnr = ?";
 
@@ -123,7 +175,8 @@ public class ReservationService {
                         rs.getString("class_type"),
                         rs.getString("journey_date"),
                         rs.getString("source"),
-                        rs.getString("destination")
+                        rs.getString("destination"),
+                        rs.getInt("fare")
                     );
                 }
             }
@@ -133,7 +186,35 @@ public class ReservationService {
         return null;
     }
 
-    // 5. Deletes a confirmed cancellation from SQLite
+    // 7. Fetches all active reservations (most recent first)
+    public static List<Reservation> getAllReservations() {
+        List<Reservation> list = new ArrayList<>();
+        String sql = "SELECT * FROM reservations ORDER BY rowid DESC";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(new Reservation(
+                    rs.getString("pnr"),
+                    rs.getString("passenger_name"),
+                    rs.getString("train_number"),
+                    rs.getString("train_name"),
+                    rs.getString("class_type"),
+                    rs.getString("journey_date"),
+                    rs.getString("source"),
+                    rs.getString("destination"),
+                    rs.getInt("fare")
+                ));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error loading all reservations: " + e.getMessage());
+        }
+        return list;
+    }
+
+    // 8. Deletes a confirmed cancellation from SQLite
     public static boolean cancelByPnr(String pnr) {
         String sql = "DELETE FROM reservations WHERE pnr = ?";
 
@@ -156,17 +237,5 @@ public class ReservationService {
                 return candidate;
             }
         }
-    }
-
-    // Quick test to verify train list and intermediate route stops
-    public static void main(String[] args) {
-        DatabaseManager.initializeDatabase();
-
-        List<String> allTrains = getAllTrains();
-        System.out.println("Total trains loaded: " + allTrains.size());
-        System.out.println("First train in list: " + allTrains.get(0));
-
-        String[] stops = getRouteStops("12951");
-        System.out.println("Stops for 12951: " + String.join(" -> ", stops));
     }
 }

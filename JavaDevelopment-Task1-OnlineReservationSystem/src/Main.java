@@ -6,7 +6,7 @@ public class Main {
         DatabaseManager.initializeDatabase();
 
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         } catch (Exception ignored) {}
 
         SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
